@@ -23,10 +23,10 @@ pyfiglet
 pytz
 future==0.18.3
 search_engine_parser
-py-tgcalls==2.2.11
+py-tgcalls==2.2.5
 pykeyboard
 pyshorteners
-kurigram==2.2.23
+Pyrogram==2.0.106
 python-dotenv
 pyyaml==6.0.1
 requests
@@ -43,7 +43,7 @@ py-yt-search
 gtts
 git+https://github.com/AsmSafone/SafoneAPI
 lexica-api==1.5.1
-httpx[http2]==0.28.1
+httpx==0.28.1
 gpytranslate
 openai==0.28.0
 pickledb
