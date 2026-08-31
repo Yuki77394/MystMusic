@@ -1,155 +1,275 @@
-import requests
 import random
-from SWAGGYMUSIC import app, userbot
+
+from pyrogram import filters
+from pyrogram.types import ChatPermissions, ChatPrivileges
+
+from SWAGGYMUSIC import app
 from SWAGGYMUSIC.misc import SUDOERS
-from pyrogram import * 
-from pyrogram.types import *
 from SWAGGYMUSIC.utils.Swaggy_BAN import admin_filter
 
 
-
-
-
-
 Yumikoo_text = [
-"hey please don't disturb me.",
-"who are you",    
-"aap kon ho",
-"aap mere owner to nhi lgte ",
-"hey tum mera name kyu le rhe ho meko sone do",
-"ha bolo kya kaam hai ",
-"dekho abhi mai busy hu ",
-"hey i am busy",
-"aapko smj nhi aata kya ",
-"leave me alone",
-"dude what happend",    
+    "hey please don't disturb me.",
+    "who are you",
+    "aap kon ho",
+    "aap mere owner to nhi lgte",
+    "hey tum mera name kyu le rhe ho meko sone do",
+    "ha bolo kya kaam hai",
+    "dekho abhi mai busy hu",
+    "hey i am busy",
+    "aapko smj nhi aata kya",
+    "leave me alone",
+    "dude what happend",
 ]
+
 
 strict_txt = [
-"i can't restrict against my besties",
-"are you serious i am not restrict to my friends",
-"fuck you bsdk k mai apne dosto ko kyu kru",
-"hey stupid admin ", 
-"ha ye phele krlo maar lo ek dusre ki gwaand",  
-"i can't hi is my closest friend",
-"i love him please don't restict this user try to usertand "
+    "i can't restrict against my besties",
+    "are you serious? i am not going to restrict my friends",
+    "hey, apne dost ko kyun restrict karu?",
+    "i can't, this is my closest friend",
+    "i love him, please don't restrict this user",
 ]
 
 
- 
-ban = ["ban","boom"]
-unban = ["unban",]
-mute = ["mute","silent","shut"]
-unmute = ["unmute","speak","free"]
-kick = ["kick", "out","nikaal","nikal"]
-promote = ["promote","adminship"]
-fullpromote = ["fullpromote","fulladmin"]
-demote = ["demote","lelo"]
-group = ["group"]
-channel = ["channel"]
+ban = ["ban", "boom"]
+unban = ["unban"]
+
+mute = ["mute", "silent", "shut"]
+unmute = ["unmute", "speak", "free"]
+
+kick = ["kick", "out", "nikaal", "nikal"]
+
+promote = ["promote", "adminship"]
+fullpromote = ["fullpromote", "fulladmin"]
+
+demote = ["demote", "lelo"]
 
 
+# =========================================================
+# COMMAND FILTER
+# Swaggy + Mystical
+# =========================================================
 
-# ========================================= #
+command_filter = (
+    filters.command(["waggy"], prefixes=["S"])
+    | filters.command(["ystical"], prefixes=["M"])
+)
 
-@app.on_message(filters.command(["ystical", "waggy"], prefixes=["M", "S"]) & admin_filter)
+
+# =========================================================
+# NORMAL RANDOM REPLY
+# ANY MEMBER CAN USE:
+# Swaggy
+# Mystical
+# =========================================================
+
+@app.on_message(command_filter)
+async def random_reply_handler(_, message):
+
+    if not message.text:
+        return
+
+    parts = message.text.split()
+
+    # Only command without action
+    if len(parts) == 1:
+        return await message.reply(
+            random.choice(Yumikoo_text)
+        )
+
+
+# =========================================================
+# ADMIN MODERATION COMMANDS
+# ONLY ADMINS CAN USE:
+#
+# Swaggy ban
+# Mystical ban
+# Swaggy mute
+# Mystical mute
+# etc.
+#
+# Must reply to target user's message
+# =========================================================
+
+@app.on_message(command_filter & admin_filter)
 async def restriction_app(_, message):
+
+    if not message.text:
+        return
+
+    parts = message.text.split()
+
+    # No action -> handled by random_reply_handler
+    if len(parts) < 2:
+        return
+
     reply = message.reply_to_message
+
+    if not reply or not reply.from_user:
+        return await message.reply(
+            "Kisi user ke message ko reply karke command use karo."
+        )
+
     chat_id = message.chat.id
+    user_id = reply.from_user.id
 
-    # Check if the command has additional arguments
-    if len(message.text.split()) < 2:
-        return await message.reply(random.choice(Yumikoo_text))
+    command_args = message.text.split(
+        maxsplit=1
+    )[1].lower()
 
-    # Extract the text after the command
-    command_args = message.text.split(maxsplit=1)[1]
-    data = command_args.split(" ")
- 
-    if reply:
-        user_id = reply.from_user.id
-        for banned in data:
-            print(f"present {banned}")
-            if banned in ban:
-                if user_id in SUDOERS:
-                    await message.reply(random.choice(strict_txt))          
-                else:
-                    await app.ban_chat_member(chat_id, user_id)
-                    await message.reply("OK, Ban kar diya madrchod ko sala Chutiya tha !")
-                    
-        for unbanned in data:
-            print(f"present {unbanned}")
-            if unbanned in unban:
-                await app.unban_chat_member(chat_id, user_id)
-                await message.reply(f"Ok, aap bolte hai to unban kar diya") 
-                
-        for kicked in data:
-            print(f"present {kicked}")
-            if kicked in kick:
-                if user_id in SUDOERS:
-                    await message.reply(random.choice(strict_txt))
-                
-                else:
-                    await app.ban_chat_member(chat_id, user_id)
-                    await app.unban_chat_member(chat_id, user_id)
-                    await message.reply("get lost! bhaga diya bhosdi wale ko") 
-                    
-        for muted in data:
-            print(f"present {muted}") 
-            if muted in mute:
-                if user_id in SUDOERS:
-                    await message.reply(random.choice(strict_txt))
-                
-                else:
-                    permissions = ChatPermissions(can_send_messages=False)
-                    await message.chat.restrict_member(user_id, permissions)
-                    await message.reply(f"muted successfully! aukatless people tha bkl.") 
-                    
-        for unmuted in data:
-            print(f"present {unmuted}")            
-            if unmuted in unmute:
-                permissions = ChatPermissions(can_send_messages=True)
-                await message.chat.restrict_member(user_id, permissions)
-                await message.reply(f"Huh, OK, sir unmute kar diya maine !!")   
+    data = command_args.split()
 
 
-        for promoted in data:
-            print(f"present {promoted}")            
-            if promoted in promote:
-                await app.promote_chat_member(chat_id, user_id, privileges=ChatPrivileges(
-                    can_change_info=False,
-                    can_invite_users=True,
-                    can_delete_messages=True,
-                    can_restrict_members=False,
-                    can_pin_messages=True,
-                    can_promote_members=False,
-                    can_manage_chat=True,
-                    can_manage_video_chats=True,
-                       )
-                     )
-                await message.reply("promoted !")
+    # =====================================================
+    # BAN
+    # =====================================================
 
-        for demoted in data:
-            print(f"present {demoted}")            
-            if demoted in demote:
-                await app.promote_chat_member(chat_id, user_id, privileges=ChatPrivileges(
-                    can_change_info=False,
-                    can_invite_users=False,
-                    can_delete_messages=False,
-                    can_restrict_members=False,
-                    can_pin_messages=False,
-                    can_promote_members=False,
-                    can_manage_chat=False,
-                    can_manage_video_chats=False,
-                       )
-                     )
-                await message.reply("demoted !")
+    if any(word in ban for word in data):
+
+        if user_id in SUDOERS:
+            return await message.reply(
+                random.choice(strict_txt)
+            )
+
+        await app.ban_chat_member(
+            chat_id,
+            user_id
+        )
+
+        return await message.reply(
+            "User ko ban kar diya."
+        )
 
 
-#async def your_function():
-    for fullpromoted in data:
-        print(f"present {fullpromoted}")            
-        if fullpromoted in fullpromote:
-            await app.promote_chat_member(chat_id, user_id, privileges=ChatPrivileges(
+    # =====================================================
+    # UNBAN
+    # =====================================================
+
+    if any(word in unban for word in data):
+
+        await app.unban_chat_member(
+            chat_id,
+            user_id
+        )
+
+        return await message.reply(
+            "User ko unban kar diya."
+        )
+
+
+    # =====================================================
+    # KICK
+    # =====================================================
+
+    if any(word in kick for word in data):
+
+        if user_id in SUDOERS:
+            return await message.reply(
+                random.choice(strict_txt)
+            )
+
+        # Telegram kick:
+        # temporarily ban then immediately unban
+        await app.ban_chat_member(
+            chat_id,
+            user_id
+        )
+
+        await app.unban_chat_member(
+            chat_id,
+            user_id
+        )
+
+        return await message.reply(
+            "User ko group se kick kar diya."
+        )
+
+
+    # =====================================================
+    # MUTE
+    # =====================================================
+
+    if any(word in mute for word in data):
+
+        if user_id in SUDOERS:
+            return await message.reply(
+                random.choice(strict_txt)
+            )
+
+        permissions = ChatPermissions(
+            can_send_messages=False
+        )
+
+        await message.chat.restrict_member(
+            user_id,
+            permissions
+        )
+
+        return await message.reply(
+            "User ko mute kar diya."
+        )
+
+
+    # =====================================================
+    # UNMUTE
+    # =====================================================
+
+    if any(word in unmute for word in data):
+
+        permissions = ChatPermissions(
+            can_send_messages=True,
+            can_send_media_messages=True,
+            can_send_other_messages=True,
+            can_add_web_page_previews=True,
+        )
+
+        await message.chat.restrict_member(
+            user_id,
+            permissions
+        )
+
+        return await message.reply(
+            "User ko unmute kar diya."
+        )
+
+
+    # =====================================================
+    # PROMOTE
+    # =====================================================
+
+    if any(word in promote for word in data):
+
+        await app.promote_chat_member(
+            chat_id,
+            user_id,
+            privileges=ChatPrivileges(
+                can_change_info=False,
+                can_invite_users=True,
+                can_delete_messages=True,
+                can_restrict_members=False,
+                can_pin_messages=True,
+                can_promote_members=False,
+                can_manage_chat=True,
+                can_manage_video_chats=True,
+            )
+        )
+
+        return await message.reply(
+            "User ko promote kar diya."
+        )
+
+
+    # =====================================================
+    # FULL PROMOTE
+    # =====================================================
+
+    if any(word in fullpromote for word in data):
+
+        await app.promote_chat_member(
+            chat_id,
+            user_id,
+            privileges=ChatPrivileges(
                 can_change_info=True,
                 can_invite_users=True,
                 can_delete_messages=True,
@@ -158,6 +278,40 @@ async def restriction_app(_, message):
                 can_promote_members=True,
                 can_manage_chat=True,
                 can_manage_video_chats=True,
-               )
-             )
-            await message.reply("fullpromoted !")
+            )
+        )
+
+        return await message.reply(
+            "User ko full admin promote kar diya."
+        )
+
+
+    # =====================================================
+    # DEMOTE
+    # =====================================================
+
+    if any(word in demote for word in data):
+
+        await app.promote_chat_member(
+            chat_id,
+            user_id,
+            privileges=ChatPrivileges(
+                can_change_info=False,
+                can_invite_users=False,
+                can_delete_messages=False,
+                can_restrict_members=False,
+                can_pin_messages=False,
+                can_promote_members=False,
+                can_manage_chat=False,
+                can_manage_video_chats=False,
+            )
+        )
+
+        return await message.reply(
+            "User ko demote kar diya."
+        )
+
+
+    return await message.reply(
+        "Ye command samajh nahi aayi."
+    )
