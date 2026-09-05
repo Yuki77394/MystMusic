@@ -20,6 +20,38 @@ from config import adminlist
 IS_BROADCASTING = False
 
 
+async def copy_message_preserve_format(client, chat_id, source_message, reply_markup=None):
+    """Re-send a message while preserving Telegram entities and media spoilers."""
+    file_id = None
+    for media_type in (
+        "photo", "video", "animation", "audio", "voice",
+        "document", "video_note", "sticker",
+    ):
+        media = getattr(source_message, media_type, None)
+        if media is not None:
+            file_id = media.file_id
+            break
+
+    if file_id is not None:
+        return await client.send_cached_media(
+            chat_id=chat_id,
+            file_id=file_id,
+            caption=source_message.caption,
+            caption_entities=source_message.caption_entities,
+            parse_mode=None,
+            reply_markup=reply_markup,
+            has_spoiler=getattr(source_message, "has_media_spoiler", False),
+        )
+
+    return await client.send_message(
+        chat_id=chat_id,
+        text=source_message.text or "",
+        entities=source_message.entities,
+        parse_mode=None,
+        reply_markup=reply_markup,
+    )
+
+
 @app.on_message(filters.command("broadcast") & SUDOERS)
 @language
 async def braodcast_message(client, message, _):
@@ -64,12 +96,7 @@ async def braodcast_message(client, message, _):
         for i in chats:
             try:
                 m = (
-                    await app.copy_message(
-                        chat_id=i,
-                        from_chat_id=y,
-                        message_id=x,
-                        reply_markup=reply_markup
-                    )
+                    await copy_message_preserve_format(app, i, message.reply_to_message, reply_markup)
                     if message.reply_to_message
                     else await app.send_message(i, text=query)
                 )
@@ -107,11 +134,7 @@ async def braodcast_message(client, message, _):
 
         for i in users:
             try:
-                await app.copy_message(
-                    chat_id=i,
-                    from_chat_id=y,
-                    message_id=x
-                ) if message.reply_to_message else await app.send_message(i, text=query)
+                await copy_message_preserve_format(app, i, message.reply_to_message) if message.reply_to_message else await app.send_message(i, text=query)
 
                 susr += 1
                 await asyncio.sleep(0.2)
@@ -137,11 +160,7 @@ async def braodcast_message(client, message, _):
             async for dialog in client.get_dialogs():
                 try:
                     if message.reply_to_message:
-                        await client.copy_message(
-                            chat_id=dialog.chat.id,
-                            from_chat_id=y,
-                            message_id=x
-                        )
+                        await copy_message_preserve_format(client, dialog.chat.id, message.reply_to_message)
                     else:
                         await client.send_message(dialog.chat.id, text=query)
 
