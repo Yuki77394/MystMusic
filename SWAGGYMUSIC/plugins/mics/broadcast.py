@@ -28,17 +28,20 @@ async def braodcast_message(client, message, _):
     if IS_BROADCASTING:
         return await message.reply_text("Already broadcasting in progress...")
 
-    # 🔹 If reply message
+    reply_markup = None
+
+    # If reply message
     if message.reply_to_message:
         x = message.reply_to_message.id
         y = message.chat.id
+        reply_markup = message.reply_to_message.reply_markup
     else:
         if len(message.command) < 2:
             return await message.reply_text(_["broad_2"])
 
         query = message.text.split(None, 1)[1]
 
-        # 🔹 Clean flags
+        # Clean flags
         flags = ["-pin", "-nobot", "-pinloud", "-assistant", "-user"]
         for f in flags:
             query = query.replace(f, "")
@@ -49,111 +52,141 @@ async def braodcast_message(client, message, _):
             return await message.reply_text(_["broad_8"])
 
     IS_BROADCASTING = True
-    await message.reply_text(_["broad_1"])
 
-    # ================= CHAT BROADCAST =================
-    if "-nobot" not in message.text:
-        sent = 0
-        pin = 0
+    try:
+        await message.reply_text(_["broad_1"])
 
-        chats = [int(chat["chat_id"]) for chat in await get_served_chats()]
-
-        for i in chats:
-            try:
-                m = (
-                    await app.forward_message(
-                        chat_id=i,
-                        from_chat_id=y,
-                        message_id=x
-                    )
-                    if message.reply_to_message
-                    else await app.send_message(i, text=query)
-                )
-
-                # 🔹 Pin logic
-                if "-pin" in message.text:
-                    try:
-                        await m.pin(disable_notification=True)
-                        pin += 1
-                    except:
-                        pass
-
-                elif "-pinloud" in message.text:
-                    try:
-                        await m.pin(disable_notification=False)
-                        pin += 1
-                    except:
-                        pass
-
-                sent += 1
-                await asyncio.sleep(0.2)
-
-            except FloodWait as fw:
-                await asyncio.sleep(fw.value)
-            except:
-                continue
-
-        await message.reply_text(_["broad_3"].format(sent, pin))
-
-    # ================= USER BROADCAST =================
-    if "-user" in message.text:
-        susr = 0
-
-        users = [int(user["user_id"]) for user in await get_served_users()]
-
-        for i in users:
-            try:
-                await app.forward_message(
-                    chat_id=i,
-                    from_chat_id=y,
-                    message_id=x
-                ) if message.reply_to_message else await app.send_message(i, text=query)
-
-                susr += 1
-                await asyncio.sleep(0.2)
-
-            except FloodWait as fw:
-                await asyncio.sleep(fw.value)
-            except:
-                continue
-
-        await message.reply_text(_["broad_4"].format(susr))
-
-    # ================= ASSISTANT BROADCAST =================
-    if "-assistant" in message.text:
-        aw = await message.reply_text(_["broad_5"])
-        text = _["broad_6"]
-
-        from PURVIMUSIC.core.userbot import assistants
-
-        for num in assistants:
+        # ================= CHAT BROADCAST =================
+        if "-nobot" not in message.text:
             sent = 0
-            client = await get_client(num)
+            pin = 0
 
-            async for dialog in client.get_dialogs():
+            chats = [
+                int(chat["chat_id"])
+                for chat in await get_served_chats()
+            ]
+
+            for i in chats:
                 try:
                     if message.reply_to_message:
-                        await client.forward_message(
-                            chat_id=dialog.chat.id,
+                        # COPY instead of FORWARD:
+                        # no forwarded-from tag and reply markup is preserved.
+                        m = await app.copy_message(
+                            chat_id=i,
                             from_chat_id=y,
-                            message_id=x
+                            message_id=x,
+                            reply_markup=reply_markup,
                         )
                     else:
-                        await client.send_message(dialog.chat.id, text=query)
+                        m = await app.send_message(i, text=query)
+
+                    # Pin logic
+                    if "-pin" in message.text:
+                        try:
+                            await m.pin(disable_notification=True)
+                            pin += 1
+                        except Exception as e:
+                            print(f"Broadcast pin error in {i}: {e}")
+
+                    elif "-pinloud" in message.text:
+                        try:
+                            await m.pin(disable_notification=False)
+                            pin += 1
+                        except Exception as e:
+                            print(f"Broadcast pinloud error in {i}: {e}")
 
                     sent += 1
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(0.2)
 
                 except FloodWait as fw:
                     await asyncio.sleep(fw.value)
-                except:
+                except Exception as e:
+                    # Do not silently hide broadcast failures.
+                    print(f"Chat broadcast error in {i}: {e}")
                     continue
 
-            text += _["broad_7"].format(num, sent)
+            await message.reply_text(_["broad_3"].format(sent, pin))
 
-        await aw.edit_text(text)
+        # ================= USER BROADCAST =================
+        if "-user" in message.text:
+            susr = 0
 
-    IS_BROADCASTING = False
+            users = [
+                int(user["user_id"])
+                for user in await get_served_users()
+            ]
+
+            for i in users:
+                try:
+                    if message.reply_to_message:
+                        # COPY instead of FORWARD to avoid forwarded attribution.
+                        await app.copy_message(
+                            chat_id=i,
+                            from_chat_id=y,
+                            message_id=x,
+                            reply_markup=reply_markup,
+                        )
+                    else:
+                        await app.send_message(i, text=query)
+
+                    susr += 1
+                    await asyncio.sleep(0.2)
+
+                except FloodWait as fw:
+                    await asyncio.sleep(fw.value)
+                except Exception as e:
+                    print(f"User broadcast error in {i}: {e}")
+                    continue
+
+            await message.reply_text(_["broad_4"].format(susr))
+
+        # ================= ASSISTANT BROADCAST =================
+        if "-assistant" in message.text:
+            aw = await message.reply_text(_["broad_5"])
+            text = _["broad_6"]
+
+            # Correct package name for this repository.
+            from SWAGGYMUSIC.core.userbot import assistants
+
+            for num in assistants:
+                sent = 0
+                assistant_client = await get_client(num)
+
+                async for dialog in assistant_client.get_dialogs():
+                    try:
+                        if message.reply_to_message:
+                            await assistant_client.copy_message(
+                                chat_id=dialog.chat.id,
+                                from_chat_id=y,
+                                message_id=x,
+                                reply_markup=reply_markup,
+                            )
+                        else:
+                            await assistant_client.send_message(
+                                dialog.chat.id,
+                                text=query,
+                            )
+
+                        sent += 1
+                        await asyncio.sleep(2)
+
+                    except FloodWait as fw:
+                        await asyncio.sleep(fw.value)
+                    except Exception as e:
+                        print(
+                            f"Assistant broadcast error "
+                            f"({num}) in {dialog.chat.id}: {e}"
+                        )
+                        continue
+
+                text += _["broad_7"].format(num, sent)
+
+            await aw.edit_text(text)
+
+    finally:
+        # Always release the broadcast lock, even if an unexpected
+        # exception occurs during the broadcast.
+        IS_BROADCASTING = False
 
 
 # ================= AUTO CLEAN =================
@@ -179,5 +212,9 @@ async def auto_clean():
                         user_id = await alpha_to_int(user)
                         adminlist[chat_id].append(user_id)
 
-        except:
+        except Exception as e:
+            print(f"Broadcast auto_clean error: {e}")
             continue
+
+
+asyncio.create_task(auto_clean())
