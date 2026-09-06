@@ -28,13 +28,10 @@ async def braodcast_message(client, message, _):
     if IS_BROADCASTING:
         return await message.reply_text("Already broadcasting in progress...")
 
-    reply_markup = None
-
     # 🔹 If reply message
     if message.reply_to_message:
         x = message.reply_to_message.id
         y = message.chat.id
-        reply_markup = message.reply_to_message.reply_markup
     else:
         if len(message.command) < 2:
             return await message.reply_text(_["broad_2"])
@@ -67,8 +64,7 @@ async def braodcast_message(client, message, _):
                     await app.forward_message(
                         chat_id=i,
                         from_chat_id=y,
-                        message_id=x,
-                        reply_markup=reply_markup
+                        message_id=x
                     )
                     if message.reply_to_message
                     else await app.send_message(i, text=query)
