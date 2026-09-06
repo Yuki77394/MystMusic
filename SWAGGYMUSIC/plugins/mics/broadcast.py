@@ -68,6 +68,7 @@ async def braodcast_message(client, message, _):
                         chat_id=i,
                         from_chat_id=y,
                         message_id=x,
+                        reply_markup=reply_markup
                     )
                     if message.reply_to_message
                     else await app.send_message(i, text=query)
