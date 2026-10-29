@@ -2,6 +2,7 @@ import asyncio
 import os
 import re
 import time
+import inspect
 from typing import Union
 import yt_dlp
 from pyrogram.enums import MessageEntityType
@@ -46,15 +47,21 @@ async def _search_results(query: str, limit: int = 1) -> list[dict]:
         return []
 
     def _primary_search():
-        # youtube-search-python's standard VideosSearch API is synchronous.
-        # Calling .next() directly in an async handler blocks the bot event loop;
-        # isolate it in a worker thread and apply a real timeout.
-        return VideosSearch(query, limit=limit).next()
+        # Different youtube-search-python releases expose .next() as either
+        # synchronous or asynchronous. Resolve both forms in the worker thread
+        # so a coroutine is never mistaken for a result dictionary.
+        response = VideosSearch(query, limit=limit).next()
+        if inspect.isawaitable(response):
+            response = asyncio.run(response)
+        return response
 
     try:
         response = await asyncio.wait_for(
             asyncio.to_thread(_primary_search), timeout=5.0
         )
+        if inspect.isawaitable(response):
+            # Defensive compatibility if a library wrapper returns an awaitable.
+            response = await asyncio.wait_for(response, timeout=5.0)
         results = (response or {}).get("result") or []
         if results:
             return results[:limit]
