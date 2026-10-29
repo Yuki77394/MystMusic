@@ -528,15 +528,10 @@ class YouTubeAPI:
                 fresh = await _yt_direct_info(yturl)
                 if fresh:
                     info = fresh
-            if info and not isinstance(info, dict):
-                info = None
             if info:
-                try:
-                    seconds = int(float(info.get("duration") or 0))
-                except (TypeError, ValueError, OverflowError):
-                    seconds = 0
-                title = str(info.get("title") or "")
-                thumbnail = str(info.get("thumbnail") or fallback_thumb)
+                seconds = int(info.get("duration") or 0)
+                title = info.get("title") or ""
+                thumbnail = info.get("thumbnail") or fallback_thumb
                 if info.get("url"):
                     now = time.monotonic()
                     _DIRECT_URL_CACHE[yturl] = (info["url"], now + _DIRECT_URL_CACHE_TTL)
@@ -544,14 +539,9 @@ class YouTubeAPI:
             else:
                 # Metadata fallback never passes the URL into VideosSearch.
                 info = await _search_video_metadata(direct_id)
-                if not isinstance(info, dict):
-                    info = {}
-                title = str(info.get("title") or await _oembed_title(direct_id) or "YouTube Track")
-                try:
-                    seconds = int(float(info.get("duration") or 0))
-                except (TypeError, ValueError, OverflowError):
-                    seconds = 0
-                thumbnail = str(info.get("thumbnail") or fallback_thumb)
+                title = info.get("title") or await _oembed_title(direct_id) or "YouTube Track"
+                seconds = int(info.get("duration") or 0)
+                thumbnail = info.get("thumbnail") or fallback_thumb
 
             duration_min = (
                 f"{seconds // 60}:{seconds % 60:02d}"
@@ -577,25 +567,20 @@ class YouTubeAPI:
         if "&" in original:
             original = original.split("&", 1)[0]
         result_list = await _search_results(original, 1)
-        if not isinstance(result_list, (list, tuple)) or not result_list:
+        if not result_list:
             raise ValueError("No YouTube search result found for query")
         result = result_list[0]
-        if not isinstance(result, dict):
-            raise ValueError("Invalid YouTube search result")
         vidid = result.get("id")
         if not vidid:
             raise ValueError("YouTube search result has no video ID")
         thumbs = result.get("thumbnails") or []
         thumbnail = result.get("thumbnail") or (thumbs[0].get("url") if thumbs else "")
-        duration_min = result.get("duration") or "00:00"
-        if not isinstance(duration_min, str):
-            duration_min = str(duration_min)
         track_details = {
-            "title": str(result.get("title") or original),
-            "link": str(result.get("link") or result.get("webpage_url") or f"https://www.youtube.com/watch?v={vidid}"),
-            "vidid": str(vidid),
-            "duration_min": duration_min,
-            "thumb": str(thumbnail or f"https://i.ytimg.com/vi/{vidid}/hqdefault.jpg").split("?")[0],
+            "title": result.get("title") or original,
+            "link": result.get("link") or result.get("webpage_url") or f"https://www.youtube.com/watch?v={vidid}",
+            "vidid": vidid,
+            "duration_min": result.get("duration") or "00:00",
+            "thumb": (thumbnail or f"https://i.ytimg.com/vi/{vidid}/hqdefault.jpg").split("?")[0],
         }
         return track_details, vidid
  
