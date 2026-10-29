@@ -23,16 +23,9 @@ UPSTREAM_REPO = getenv("UPSTREAM_REPO", "https://github.com/Yuki77394/MystMusic"
 UPSTREAM_BRANCH = getenv("UPSTREAM_BRANCH", "main")
 GIT_TOKEN = getenv("GIT_TOKEN", None)
 
-# YouTube backend for song search / metadata / download (new API; used by platforms/Youtube.py + utils/autoplay.py + utils/thumbnails.py + core/prewarm.py).
-# Read directly from env by Youtube.py / autoplay.py / prewarm.py so Heroku config-var changes take effect on next restart without a redeploy.
-API_URL = getenv("API_URL", "http://yt.riteshyt.in")
-API_KEY = getenv("API_KEY", "riteshfree576fd88ed84a3f46c84fd556")
-YOUTUBE_API_URL = API_URL
-YOUTUBE_API_KEY = API_KEY
-
-# Legacy xBit endpoint kept for backward compatibility (not used by the new YouTube platform code).
-YTPROXY_URL = getenv("YTPROXY_URL", 'https://tgapi.xbitcode.com') ## xBit Music Endpoint.
-YT_API_KEY = getenv("YT_API_KEY" , None ) ## Your API key like: xbit_10000000xx0233 Get from  https://t.me/tgmusic_apibot
+# Vars For API End Pont.
+ARC_API_URL = getenv("ARC_API_URL", "https://api.arcmusic.fun")
+ARC_API_KEY = getenv("ARC_API_KEY", "ARCbb2204210054d2c25478e9")
 
 PRIVACY_LINK = getenv("PRIVACY_LINK", "")
 SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/SpicyxNetwork")
